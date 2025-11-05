@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 
 // Force Node.js runtime for OpenAI SDK compatibility
 export const runtime = 'nodejs'
@@ -8,21 +9,72 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
 
+const genAI = process.env.GOOGLE_AI_API_KEY 
+  ? new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY)
+  : null
+
 export async function POST(req: NextRequest) {
+  let selectedModel = 'gpt-4'
   try {
     const { messages, model = 'gpt-4' } = await req.json()
-
-    if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json(
-        { error: 'OpenAI API key is not configured' },
-        { status: 500 }
-      )
-    }
+    selectedModel = model
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json(
         { error: 'Messages array is required' },
         { status: 400 }
+      )
+    }
+
+    // Handle Gemini models
+    if (model === 'gemini-2.5-pro' || model === 'gemini-1.5-pro') {
+      if (!genAI || !process.env.GOOGLE_AI_API_KEY) {
+        return NextResponse.json(
+          { error: 'Google AI API key is not configured. Please set GOOGLE_AI_API_KEY in your environment variables.' },
+          { status: 500 }
+        )
+      }
+
+      // Gemini uses a different model name format
+      // Using gemini-2.0-flash-exp for 2.0 Flash, or gemini-1.5-pro for the other option
+      const geminiModelName = model === 'gemini-2.5-pro' ? 'gemini-2.0-flash-exp' : 'gemini-1.5-pro'
+      const geminiModel = genAI.getGenerativeModel({ model: geminiModelName })
+
+      // Convert messages to Gemini format (Gemini uses alternating user/model messages)
+      // For chat, we need to format as history
+      const chatHistory = messages.slice(0, -1).map((msg: { role: string; content: string }) => ({
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.content }],
+      }))
+
+      const lastMessage = messages[messages.length - 1]
+      
+      // Start a chat session with history
+      const chat = geminiModel.startChat({
+        history: chatHistory as any,
+      })
+
+      const result = await chat.sendMessage(lastMessage.content)
+      const response = await result.response
+      const assistantMessage = response.text()
+
+      if (!assistantMessage) {
+        return NextResponse.json(
+          { error: 'No response from Gemini' },
+          { status: 500 }
+        )
+      }
+
+      return NextResponse.json({
+        message: assistantMessage,
+      })
+    }
+
+    // Handle OpenAI models (GPT-4, etc.)
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json(
+        { error: 'OpenAI API key is not configured' },
+        { status: 500 }
       )
     }
 
@@ -35,7 +87,6 @@ export async function POST(req: NextRequest) {
     // Map model selection to OpenAI model names
     const modelMap: Record<string, string> = {
       'gpt-4': 'gpt-4',
-      'gemini-2.5-pro': 'gpt-4-turbo-preview', // Fallback for Gemini (not implemented)
       'claude-3': 'gpt-4-turbo-preview', // Fallback for Claude (not implemented)
     }
     
@@ -61,10 +112,11 @@ export async function POST(req: NextRequest) {
       message: assistantMessage,
     })
   } catch (error: any) {
-    console.error('OpenAI API error:', error)
+    console.error('API error:', error)
+    const provider = selectedModel?.includes('gemini') ? 'Gemini' : 'OpenAI'
     return NextResponse.json(
       { 
-        error: error.message || 'Failed to get response from OpenAI',
+        error: error.message || `Failed to get response from ${provider}`,
         details: error.response?.data || null
       },
       { status: 500 }
