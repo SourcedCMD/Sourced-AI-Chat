@@ -2,10 +2,10 @@
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Brain, Link, Folder, Mic } from "lucide-react"
+import { Brain, Link, Folder, Mic, Send } from "lucide-react"
 import { LiquidMetal, PulsingBorder } from "@paper-design/shaders-react"
 import { motion } from "framer-motion"
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 
 interface Message {
   id: string
@@ -16,89 +16,202 @@ interface Message {
 
 export function ChatInterface() {
   const [isFocused, setIsFocused] = useState(false)
+  const [input, setInput] = useState("")
+  const [messages, setMessages] = useState<Message[]>([])
+  const [selectedModel, setSelectedModel] = useState("gpt-4")
+  const [isLoading, setIsLoading] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages])
+
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      content: input.trim(),
+      role: "user",
+      timestamp: new Date(),
+    }
+
+    const currentInput = input.trim()
+    setMessages((prev) => [...prev, userMessage])
+    setInput("")
+    setIsLoading(true)
+
+    // Auto-resize textarea
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto"
+    }
+
+    try {
+      // Simulate AI response (replace this with actual API call)
+      // For now, this creates a mock response to demonstrate the chat works
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: `I received your message: "${currentInput}".\n\nThis is a placeholder response demonstrating that the chat interface is working. Your message was successfully sent and displayed.\n\nTo enable real AI functionality, you'll need to integrate with an AI API (like OpenAI GPT-4, Anthropic Claude, or Google Gemini).`,
+        role: "assistant",
+        timestamp: new Date(),
+      }
+      setMessages((prev) => [...prev, assistantMessage])
+    } catch (error) {
+      console.error("Error sending message:", error)
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: "Sorry, there was an error processing your message. Please try again.",
+        role: "assistant",
+        timestamp: new Date(),
+      }
+      setMessages((prev) => [...prev, errorMessage])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault()
+      handleSend()
+    }
+  }
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto"
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
+    }
+  }, [input])
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
-      <div className="w-full max-w-4xl relative">
+      <div className="w-full max-w-4xl relative flex flex-col">
         <div className="flex flex-row items-center mb-2">
-          {/* Shader Circle */}
-          <motion.div
-            id="circle-ball"
-            className="relative flex items-center justify-center z-10"
-            animate={{
-              y: isFocused ? 50 : 0,
-              opacity: isFocused ? 0 : 100,
-              filter: isFocused ? "blur(4px)" : "blur(0px)",
-              rotation: isFocused ? 180 : 0,
-            }}
-            transition={{
-              duration: 0.5,
-              type: "spring",
-              stiffness: 200,
-              damping: 20,
-            }}
-          >
-            <div className="z-10 absolute bg-white/5 h-11 w-11 rounded-full backdrop-blur-[3px]">
-              <div className="h-[2px] w-[2px] bg-white rounded-full absolute top-4 left-4  blur-[1px]" />
-              <div className="h-[2px] w-[2px] bg-white rounded-full absolute top-3 left-7  blur-[0.8px]" />
-              <div className="h-[2px] w-[2px] bg-white rounded-full absolute top-8 left-2  blur-[1px]" />
-              <div className="h-[2px] w-[2px] bg-white rounded-full absolute top-5 left-9 blur-[0.8px]" />
-              <div className="h-[2px] w-[2px] bg-white rounded-full absolute top-7 left-7  blur-[1px]" />
-            </div>
-            <LiquidMetal
-              style={{ height: 80, width: 80, filter: "blur(14px)", position: "absolute" }}
-              colorBack="hsl(0, 0%, 0%, 0)"
-              colorTint="hsl(29, 77%, 49%)"
-              repetition={4}
-              softness={0.5}
-              shiftRed={0.3}
-              shiftBlue={0.3}
-              distortion={0.1}
-              contour={1}
-              shape="circle"
-              offsetX={0}
-              offsetY={0}
-              scale={0.58}
-              rotation={50}
-              speed={5}
-            />
-            <LiquidMetal
-              style={{ height: 80, width: 80 }}
-              colorBack="hsl(0, 0%, 0%, 0)"
-              colorTint="hsl(29, 77%, 49%)"
-              repetition={4}
-              softness={0.5}
-              shiftRed={0.3}
-              shiftBlue={0.3}
-              distortion={0.1}
-              contour={1}
-              shape="circle"
-              offsetX={0}
-              offsetY={0}
-              scale={0.58}
-              rotation={50}
-              speed={5}
-            />
-          </motion.div>
+          {/* Shader Circle - only show when no messages */}
+          {messages.length === 0 && (
+            <motion.div
+              id="circle-ball"
+              className="relative flex items-center justify-center z-10"
+              animate={{
+                y: isFocused ? 50 : 0,
+                opacity: isFocused ? 0 : 100,
+                filter: isFocused ? "blur(4px)" : "blur(0px)",
+                rotation: isFocused ? 180 : 0,
+              }}
+              transition={{
+                duration: 0.5,
+                type: "spring",
+                stiffness: 200,
+                damping: 20,
+              }}
+            >
+              <div className="z-10 absolute bg-white/5 h-11 w-11 rounded-full backdrop-blur-[3px]">
+                <div className="h-[2px] w-[2px] bg-white rounded-full absolute top-4 left-4  blur-[1px]" />
+                <div className="h-[2px] w-[2px] bg-white rounded-full absolute top-3 left-7  blur-[0.8px]" />
+                <div className="h-[2px] w-[2px] bg-white rounded-full absolute top-8 left-2  blur-[1px]" />
+                <div className="h-[2px] w-[2px] bg-white rounded-full absolute top-5 left-9 blur-[0.8px]" />
+                <div className="h-[2px] w-[2px] bg-white rounded-full absolute top-7 left-7  blur-[1px]" />
+              </div>
+              <LiquidMetal
+                style={{ height: 80, width: 80, filter: "blur(14px)", position: "absolute" }}
+                colorBack="hsl(0, 0%, 0%, 0)"
+                colorTint="hsl(29, 77%, 49%)"
+                repetition={4}
+                softness={0.5}
+                shiftRed={0.3}
+                shiftBlue={0.3}
+                distortion={0.1}
+                contour={1}
+                shape="circle"
+                offsetX={0}
+                offsetY={0}
+                scale={0.58}
+                rotation={50}
+                speed={5}
+              />
+              <LiquidMetal
+                style={{ height: 80, width: 80 }}
+                colorBack="hsl(0, 0%, 0%, 0)"
+                colorTint="hsl(29, 77%, 49%)"
+                repetition={4}
+                softness={0.5}
+                shiftRed={0.3}
+                shiftBlue={0.3}
+                distortion={0.1}
+                contour={1}
+                shape="circle"
+                offsetX={0}
+                offsetY={0}
+                scale={0.58}
+                rotation={50}
+                speed={5}
+              />
+            </motion.div>
+          )}
 
-          {/* Greeting Text */}
-          <motion.p
-            className="text-white/40 text-sm font-light z-10"
-            animate={{
-              y: isFocused ? 50 : 0,
-              opacity: isFocused ? 0 : 100,
-              filter: isFocused ? "blur(4px)" : "blur(0px)",
-            }}
-            transition={{
-              duration: 0.5,
-              type: "spring",
-              stiffness: 200,
-              damping: 20,
-            }}
-          >
-            Hey there! I'm here to help with anything you need
-          </motion.p>
+          {/* Greeting Text - only show when no messages */}
+          {messages.length === 0 && (
+            <motion.p
+              className="text-white/40 text-sm font-light z-10"
+              animate={{
+                y: isFocused ? 50 : 0,
+                opacity: isFocused ? 0 : 100,
+                filter: isFocused ? "blur(4px)" : "blur(0px)",
+              }}
+              transition={{
+                duration: 0.5,
+                type: "spring",
+                stiffness: 200,
+                damping: 20,
+              }}
+            >
+              Hey there! I'm here to help with anything you need
+            </motion.p>
+          )}
         </div>
+
+        {/* Messages Display */}
+        {messages.length > 0 && (
+          <div className="mb-4 space-y-4 max-h-[60vh] overflow-y-auto overflow-x-hidden pb-4" style={{ scrollBehavior: "smooth" }}>
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${message.role === "user" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2`}
+              >
+                <div
+                  className={`max-w-[80%] rounded-lg px-4 py-3 ${
+                    message.role === "user"
+                      ? "bg-zinc-800 text-white"
+                      : "bg-zinc-900 text-white border border-zinc-800"
+                  }`}
+                >
+                  <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+                </div>
+              </div>
+            ))}
+            {isLoading && (
+              <div className="flex justify-start animate-in fade-in">
+                <div className="bg-zinc-900 text-white border border-zinc-800 rounded-lg px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
 
         <div className="relative">
           <motion.div
@@ -154,10 +267,15 @@ export function ChatInterface() {
             {/* Message Input */}
             <div className="relative mb-6">
               <Textarea
-                placeholder=""
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Type your message..."
                 className="min-h-[80px] resize-none bg-transparent border-none text-white text-base placeholder:text-zinc-500 focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none [&:focus]:ring-0 [&:focus]:outline-none [&:focus-visible]:ring-0 [&:focus-visible]:outline-none"
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
+                disabled={isLoading}
               />
             </div>
 
@@ -168,6 +286,7 @@ export function ChatInterface() {
                   variant="ghost"
                   size="sm"
                   className="h-9 w-9 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-100 hover:text-white p-0"
+                  disabled={isLoading}
                 >
                   <Brain className="h-4 w-4" />
                 </Button>
@@ -175,12 +294,13 @@ export function ChatInterface() {
                   variant="ghost"
                   size="sm"
                   className="h-9 w-9 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white p-0"
+                  disabled={isLoading}
                 >
                   <Link className="h-4 w-4" />
                 </Button>
                 {/* Center model selector */}
                 <div className="flex items-center">
-                  <Select defaultValue="gpt-4">
+                  <Select value={selectedModel} onValueChange={setSelectedModel} disabled={isLoading}>
                     <SelectTrigger className="bg-zinc-900 border-[#3D3D3D] text-white hover:bg-zinc-700 text-xs rounded-full px-2 h-8 min-w-[150px]">
                       <div className="flex items-center gap-2">
                         <span className="text-xs">⚡</span>
@@ -208,15 +328,18 @@ export function ChatInterface() {
                   variant="ghost"
                   size="sm"
                   className="h-10 w-10 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white p-0"
+                  disabled={isLoading}
                 >
                   <Folder className="h-5 w-5" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-10 w-10 rounded-full bg-orange-200 hover:bg-orange-300 text-orange-800 p-0"
+                  onClick={handleSend}
+                  disabled={!input.trim() || isLoading}
+                  className="h-10 w-10 rounded-full bg-orange-500 hover:bg-orange-600 text-white p-0 disabled:bg-zinc-800 disabled:text-zinc-500"
                 >
-                  <Mic className="h-5 w-5" />
+                  <Send className="h-5 w-5" />
                 </Button>
               </div>
             </div>
