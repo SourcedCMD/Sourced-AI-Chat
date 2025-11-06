@@ -1,0 +1,24 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Black background -->
+  <rect width="32" height="32" fill="#000000"/>
+  
+  <!-- Stylized geometric S - optimized for small sizes -->
+  <g transform="translate(6, 6)">
+    <!-- Top section - sharp angular hook pointing right/up -->
+    <path d="M8 2 L16 2 L18 4 L20 6 L18 8 L14 8 L12 6 L10 4 Z" 
+          fill="#00D9FF"/>
+    
+    <!-- Middle section - sharp inward angle -->
+    <path d="M10 8 L12 10 L16 10 L18 12 L20 14 L18 16 L14 16 L12 14 L10 12 Z" 
+          fill="#00D9FF"/>
+    
+    <!-- Bottom section - sharp angular hook pointing left/down -->
+    <path d="M10 14 L12 16 L16 16 L18 18 L20 20 L18 22 L10 22 L8 20 L6 18 L8 16 Z" 
+          fill="#00D9FF"/>
+    
+    <!-- 3D depth shadow (darker blue on right/bottom edges) -->
+    <path d="M16 2 L18 4 L20 6 L21 7 L20 8 L20 10 L21 11 L20 12 L20 14 L21 15 L20 16 L20 18 L21 19 L20 20 L20 22 L18 24 L16 26 L16 24 L14 22 L14 20 L13 19 L14 18 L14 16 L13 15 L14 14 L14 12 L13 11 L14 10 L14 8 L13 7 L14 6 L14 4 L16 2 Z" 
+          fill="#006699" 
+          opacity="0.75"/>
+  </g>
+</svg>
