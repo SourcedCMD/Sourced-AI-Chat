@@ -28,8 +28,8 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/SourcedCMD/Sourced-AI-Chat.git
-cd Sourced-AI-Chat
+git clone https://github.com/SourcedCMD/CodeSupplyChat.git
+cd CodeSupplyChat
 
 # Install dependencies
 pnpm install   # or `npm install` / `yarn install`
