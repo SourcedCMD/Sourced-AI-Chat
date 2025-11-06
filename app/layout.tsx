@@ -12,7 +12,7 @@ const doto = Doto({
 })
 
 export const metadata: Metadata = {
-  title: "CodeSupply Chat",
+  title: "CS Chat",
   description: "Created with 💖",
   generator: "CodeSupply",
   icons: {
